@@ -54,6 +54,28 @@ void PlacePiece(int piece[4][4], int pieceRow, int pieceCol)
 }
 
 
+bool CheckCollision(int piece[4][4], int pieceRow, int pieceCol)
+{
+    for(int i = 0; i < 4; i++)
+    {
+        for(int j = 0; j < 4; j++)
+        {
+            if(piece[i][j] != 0)
+            {
+                int boardRow = pieceRow + i;
+                int boardCol = pieceCol + j;
+                // Check boundaries
+                if(boardRow >= rows || boardCol < 0 || boardCol >= columns)
+                    return true; // Collision with walls or floor
+                if(board[boardRow][boardCol] != 0)
+                    return true; // Collision with existing pieces
+            }
+        }
+    }
+    return false; // No collision
+}
+
+
 int main()
 {
     // Initialize the board to empty
@@ -71,16 +93,30 @@ int main()
     while (true)
     {
         // 1. Remove piece from old position
-        for (int i = 0; i < rows; i++)
-        {       // iterate rows of board
-            for (int j = 0; j < columns; j++)
-            {   // iterate cols of board
-                board[pieceRow + i][pieceCol + j] = 0;
+        for (int i = 0; i < 4; i++) 
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                if(tetromino_I[i][j] != 0)
+                {
+                    board[pieceRow + i][pieceCol + j] = 0;
+                }
             }
         }
         // 2. Try to move down
+        if(!CheckCollision(tetromino_I, pieceRow + 1, pieceCol))
+        {
+            pieceRow++; // Move down
+        }
+        else
+        {
+            // collision detected, freeze piece
+            PlacePiece(tetromino_I, pieceRow, pieceCol);
+            break;
+        }
 
         // 3. Place piece at new position
+        PlacePiece(tetromino_I, pieceRow, pieceCol);
 
         // 4. Print board
         system("cls");
@@ -90,6 +126,6 @@ int main()
         Sleep(500); // 0.5 second delay
     }
     
-    
+    cout << "Piece landed!" << endl;
     return 0;
 }
