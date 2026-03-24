@@ -3,6 +3,7 @@
 using namespace std;
 
 
+
 const int rows = 20; //Height of the board
 const int columns = 10; //Width of the board
 int board[rows][columns]; //Represented as a 2D array. empty (0) or occupied (1)
@@ -19,8 +20,6 @@ int tetromino_I[4][4] = {
     {0, 1, 0, 0},
     {0, 1, 0, 0}
 };
-
-
 
 
 void PrintBoard()
@@ -67,13 +66,22 @@ bool CheckCollision(int piece[4][4], int pieceRow, int pieceCol)
                 // Check boundaries
                 if(boardRow >= rows || boardCol < 0 || boardCol >= columns)
                     return true; // Collision with walls or floor
-                if(board[boardRow][boardCol] != 0)
+                if(board[boardRow][boardCol] != 0)//
                     return true; // Collision with existing pieces
             }
         }
     }
     return false; // No collision
 }
+
+/*
+[Remove piece]
+    [Read input]
+    [Try move]
+    [Apply if no collision]
+    [Apply gravity]
+    [Draw]*/
+
 
 
 int main()
@@ -87,12 +95,15 @@ int main()
         }
     }
 
+    // piece starting position
     pieceRow = 0;
     pieceCol = 3;
 
+    int counter = 0; // For gravity timing
+
     while (true)
     {
-        // 1. Remove piece from old position
+        //// 1. Remove piece from old position
         for (int i = 0; i < 4; i++) 
         {
             for (int j = 0; j < 4; j++)
@@ -103,27 +114,60 @@ int main()
                 }
             }
         }
-        // 2. Try to move down
+        /* 2. Try to move down
         if(!CheckCollision(tetromino_I, pieceRow + 1, pieceCol))
         {
             pieceRow++; // Move down
         }
         else
         {
-            // collision detected, freeze piece
+            collision detected, freeze piece
             PlacePiece(tetromino_I, pieceRow, pieceCol);
             break;
+        } */
+
+
+        //player input
+        if(GetAsyncKeyState('A') & 0x8000) // Move left
+        {
+            if(!CheckCollision(tetromino_I, pieceRow, pieceCol - 1))
+            {
+                pieceCol--;
+            }
         }
 
-        // 3. Place piece at new position
+        if(GetAsyncKeyState('D') & 0x8000) // Move right
+        {
+            if(!CheckCollision(tetromino_I, pieceRow, pieceCol + 1))
+            {
+                pieceCol++;
+            }
+        }
+
+        // 3. 중력 (10프레임마다 내려감)
+        if(counter % 10 == 0)
+        {
+            if(!CheckCollision(tetromino_I, pieceRow + 1, pieceCol))
+            {
+                pieceRow++;
+            }
+            else
+            {
+                PlacePiece(tetromino_I, pieceRow, pieceCol);
+                break;
+            }
+        }
+        
+
+        //// 3. new position
         PlacePiece(tetromino_I, pieceRow, pieceCol);
 
-        // 4. Print board
+        //// 4. Print board
         system("cls");
         PrintBoard();
 
-        // 5. Wait a bit
-        Sleep(500); // 0.5 second delay
+        ////// 5. Wait a bit
+        Sleep(50); // 0.05 second delay
     }
     
     cout << "Piece landed!" << endl;
