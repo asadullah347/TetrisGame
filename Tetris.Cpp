@@ -132,7 +132,7 @@ void RotatePiece(int piece[4][4])
 // Clear completed lines and shift everything down
 void ClearLines()
 {
-    for(int i = 0; i < rows; i++)
+    for(int i = rows - 1; i >= 0; i--)
     {
         bool full = true;
 
@@ -147,14 +147,16 @@ void ClearLines()
 
         if(full)
         {
-            // Move all rows above down by one
+            // Shift down all rows above
             for(int k = i; k > 0; k--)
                 for(int j = 0; j < columns; j++)
                     board[k][j] = board[k - 1][j];
 
-            // Clear top row
+            // Reset top row to empty
             for(int j = 0; j < columns; j++)
                 board[0][j] = 0;
+
+            i++; 
         }
     }
 }
@@ -201,6 +203,10 @@ int main()
         if(GetAsyncKeyState('D') & 0x8000)
             if(!CheckCollision(currentPiece, pieceRow, pieceCol + 1))
                 pieceCol++;
+
+        if(GetAsyncKeyState('S') & 0x8000)
+            if(!CheckCollision(currentPiece, pieceRow + 1, pieceCol))
+                pieceRow++;
 
         if(GetAsyncKeyState('W') & 0x8000) // Rotate
         {
