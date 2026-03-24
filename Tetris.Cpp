@@ -1,27 +1,65 @@
 #include <iostream>
-#include <windows.h> // for Sleep() and system("cls")
+#include <windows.h>
 using namespace std;
 
+const int rows = 20;      // Height of the game board
+const int columns = 10;   // Width of the game board
 
+int board[rows][columns]; // 2D board: 0 = empty, 1 = filled
 
-const int rows = 20; //Height of the board
-const int columns = 10; //Width of the board
-int board[rows][columns]; //Represented as a 2D array. empty (0) or occupied (1)
+int pieceRow; // Current piece row position
+int pieceCol; // Current piece column position
 
-// where the current piece is located
-int pieceRow; 
-int pieceCol; 
-
-// Tetromino shapes represented as 4x4 matrices
-wchar_t tetrominoShapes[7][4]; // 7 shapes, each represented as 4 rows of wide characters
-int tetromino_I[4][4] = {
-    {0, 1, 0, 0},
-    {0, 1, 0, 0},
-    {0, 1, 0, 0},
-    {0, 1, 0, 0}
+// All tetromino shapes (fixed 4x4 grid)
+int tetrominoes[7][4][4] = {
+    { // I piece
+        {0,0,0,0},
+        {1,1,1,1},
+        {0,0,0,0},
+        {0,0,0,0}
+    },
+    { // O piece
+        {1,1,0,0},
+        {1,1,0,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    },
+    { // T piece
+        {0,1,0,0},
+        {1,1,1,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    },
+    { // S piece
+        {0,1,1,0},
+        {1,1,0,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    },
+    { // Z piece
+        {1,1,0,0},
+        {0,1,1,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    },
+    { // J piece
+        {1,0,0,0},
+        {1,1,1,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    },
+    { // L piece
+        {0,0,1,0},
+        {1,1,1,0},
+        {0,0,0,0},
+        {0,0,0,0}
+    }
 };
 
+int currentPiece[4][4]; // Currently active piece
+int currentIndex = 0;   // Index of current piece (0~6)
 
+// Print the board to console
 void PrintBoard()
 {
     for(int i = 0; i < rows; i++)
@@ -31,29 +69,27 @@ void PrintBoard()
             if(board[i][j] == 0)
                 cout << "."; // Empty cell
             else
-            cout << board[i][j] << " "; //filled cell
+                cout << "#"; // Filled cell
         }
         cout << endl;
     }
 }
 
-// Function to place a piece on the board at a given position
-void PlacePiece(int piece[4][4], int pieceRow, int pieceCol)
+// Place a piece onto the board
+void PlacePiece(int piece[4][4], int row, int col)
 {
     for(int i = 0; i < 4; i++)
-    {       // iterate rows of piece
+    {
         for(int j = 0; j < 4; j++)
-        {   // iterate cols of piece
+        {
             if(piece[i][j] != 0)
-            {     // only draw filled cells
-                board[pieceRow + i][pieceCol + j] = piece[i][j];
-            }
+                board[row + i][col + j] = piece[i][j];
         }
     }
 }
 
-
-bool CheckCollision(int piece[4][4], int pieceRow, int pieceCol)
+// Check collision with walls, floor, or other blocks
+bool CheckCollision(int piece[4][4], int row, int col)
 {
     for(int i = 0; i < 4; i++)
     {
@@ -61,115 +97,149 @@ bool CheckCollision(int piece[4][4], int pieceRow, int pieceCol)
         {
             if(piece[i][j] != 0)
             {
-                int boardRow = pieceRow + i;
-                int boardCol = pieceCol + j;
-                // Check boundaries
-                if(boardRow >= rows || boardCol < 0 || boardCol >= columns)
-                    return true; // Collision with walls or floor
-                if(board[boardRow][boardCol] != 0)//
-                    return true; // Collision with existing pieces
+                int newRow = row + i;
+                int newCol = col + j;
+
+                // Check boundary collision
+                if(newRow >= rows || newCol < 0 || newCol >= columns)
+                    return true;
+
+                // Check collision with existing blocks
+                if(board[newRow][newCol] != 0)
+                    return true;
             }
         }
     }
-    return false; // No collision
+    return false;
 }
 
-/*
-[Remove piece]
-    [Read input]
-    [Try move]
-    [Apply if no collision]
-    [Apply gravity]
-    [Draw]*/
+// Rotate piece 90 degrees clockwise
+void RotatePiece(int piece[4][4])
+{
+    int temp[4][4];
 
+    // Apply rotation
+    for(int i = 0; i < 4; i++)
+        for(int j = 0; j < 4; j++)
+            temp[j][3 - i] = piece[i][j];
 
+    // Copy back to original piece
+    for(int i = 0; i < 4; i++)
+        for(int j = 0; j < 4; j++)
+            piece[i][j] = temp[i][j];
+}
+
+// Clear completed lines and shift everything down
+void ClearLines()
+{
+    for(int i = 0; i < rows; i++)
+    {
+        bool full = true;
+
+        for(int j = 0; j < columns; j++)
+        {
+            if(board[i][j] == 0)
+            {
+                full = false;
+                break;
+            }
+        }
+
+        if(full)
+        {
+            // Move all rows above down by one
+            for(int k = i; k > 0; k--)
+                for(int j = 0; j < columns; j++)
+                    board[k][j] = board[k - 1][j];
+
+            // Clear top row
+            for(int j = 0; j < columns; j++)
+                board[0][j] = 0;
+        }
+    }
+}
+
+// Spawn a new random piece
+void SpawnPiece()
+{
+    currentIndex = rand() % 7;
+
+    for(int i = 0; i < 4; i++)
+        for(int j = 0; j < 4; j++)
+            currentPiece[i][j] = tetrominoes[currentIndex][i][j];
+
+    pieceRow = 0;
+    pieceCol = 3;
+}
 
 int main()
 {
-    // Initialize the board to empty
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < columns; j++)
-        {
+    // Initialize board to empty
+    for(int i = 0; i < rows; i++)
+        for(int j = 0; j < columns; j++)
             board[i][j] = 0;
-        }
-    }
 
-    // piece starting position
-    pieceRow = 0;
-    pieceCol = 3;
+    SpawnPiece();
 
-    int counter = 0; // For gravity timing
+    int counter = 0; // Used to control gravity timing
 
-    while (true)
+    while(true)
     {
-        //// 1. Remove piece from old position
-        for (int i = 0; i < 4; i++) 
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                if(tetromino_I[i][j] != 0)
-                {
+        counter++;
+
+        // Remove piece from previous position
+        for(int i = 0; i < 4; i++)
+            for(int j = 0; j < 4; j++)
+                if(currentPiece[i][j] != 0)
                     board[pieceRow + i][pieceCol + j] = 0;
-                }
-            }
-        }
-        /* 2. Try to move down
-        if(!CheckCollision(tetromino_I, pieceRow + 1, pieceCol))
-        {
-            pieceRow++; // Move down
-        }
-        else
-        {
-            collision detected, freeze piece
-            PlacePiece(tetromino_I, pieceRow, pieceCol);
-            break;
-        } */
 
-
-        //player input
-        if(GetAsyncKeyState('A') & 0x8000) // Move left
-        {
-            if(!CheckCollision(tetromino_I, pieceRow, pieceCol - 1))
-            {
+        // Handle player input
+        if(GetAsyncKeyState('A') & 0x8000)
+            if(!CheckCollision(currentPiece, pieceRow, pieceCol - 1))
                 pieceCol--;
-            }
-        }
 
-        if(GetAsyncKeyState('D') & 0x8000) // Move right
-        {
-            if(!CheckCollision(tetromino_I, pieceRow, pieceCol + 1))
-            {
+        if(GetAsyncKeyState('D') & 0x8000)
+            if(!CheckCollision(currentPiece, pieceRow, pieceCol + 1))
                 pieceCol++;
+
+        if(GetAsyncKeyState('W') & 0x8000) // Rotate
+        {
+            RotatePiece(currentPiece);
+
+            // Rollback if rotation causes collision
+            if(CheckCollision(currentPiece, pieceRow, pieceCol))
+            {
+                RotatePiece(currentPiece);
+                RotatePiece(currentPiece);
+                RotatePiece(currentPiece);
             }
         }
 
-        // 3. 중력 (10프레임마다 내려감)
+        //gravity every 10 frames
         if(counter % 10 == 0)
         {
-            if(!CheckCollision(tetromino_I, pieceRow + 1, pieceCol))
+            if(!CheckCollision(currentPiece, pieceRow + 1, pieceCol))
             {
                 pieceRow++;
             }
             else
             {
-                PlacePiece(tetromino_I, pieceRow, pieceCol);
-                break;
+                // Lock piece and spawn a new one
+                PlacePiece(currentPiece, pieceRow, pieceCol);
+                ClearLines();
+                SpawnPiece();
             }
         }
-        
 
-        //// 3. new position
-        PlacePiece(tetromino_I, pieceRow, pieceCol);
+        // Place piece at new position
+        PlacePiece(currentPiece, pieceRow, pieceCol);
 
-        //// 4. Print board
+        // Render
         system("cls");
         PrintBoard();
 
-        ////// 5. Wait a bit
-        Sleep(50); // 0.05 second delay
+        Sleep(50); // 0.05 second delay for smoother gameplay
     }
-    
-    cout << "Piece landed!" << endl;
+
     return 0;
 }
