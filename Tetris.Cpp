@@ -138,6 +138,8 @@ bool CheckCollision(int piece[4][4], int row, int col)
     return false;
 }
 
+
+
 // Rotate piece 90 degrees clockwise
 void RotatePiece(int piece[4][4])
 {
@@ -153,6 +155,8 @@ void RotatePiece(int piece[4][4])
         for(int j = 0; j < 4; j++)
             piece[i][j] = temp[i][j];
 }
+
+
 
 // Clear completed lines and shift everything down
 void ClearLines()
@@ -191,6 +195,8 @@ void ClearLines()
     }
 }
 
+
+
 // Spawn a new random piece
 void SpawnPiece()
 {
@@ -212,6 +218,17 @@ void UpdateScore()
     score += 1; // Increase score by 1 for every second survived
 }
 
+
+bool IsGameOver(int piece[4][4], int row, int col)
+{
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 4; j++)
+            if(piece[i][j] != 0 && board[row + i][col + j] != 0)
+                return true;  // any overlap = game over
+    return false;
+}
+
+
 int main()
 {
     // Initialize board to empty
@@ -221,6 +238,13 @@ int main()
             board[i][j] = 0;
 
     SpawnPiece();
+    if(IsGameOver(currentPiece, pieceRow, pieceCol))
+    {
+        system("cls");
+        cout << "===== GAME OVER =====" << endl;
+        cout << "Final Score: " << score << endl;
+        return 0; // 프로그램 종료
+    }
 
     int counter = 0; // Used to control gravity timing
 
@@ -231,9 +255,13 @@ int main()
         // Remove piece from previous position
         // because we will redraw it at the new position after handling input and gravity
         for(int i = 0; i < 4; i++)
+        {
             for(int j = 0; j < 4; j++)
-                if(currentPiece[i][j] != 0)
-                    board[pieceRow + i][pieceCol + j] = 0;
+            {
+                if(currentPiece[i][j] != 0 && pieceRow + i >= 0)
+                board[pieceRow + i][pieceCol + j] = 0;
+            }
+        }
 
         // Handle player input
         if(GetAsyncKeyState('A') & 0x8000)
@@ -269,6 +297,13 @@ int main()
                 PlacePiece(currentPiece,pieceRow,pieceCol);
                 ClearLines();
                 SpawnPiece();
+                    if(IsGameOver(currentPiece, pieceRow, pieceCol))
+                    {
+                        system("cls");
+                        cout << "===== GAME OVER =====" << endl;
+                        cout << "Final Score: " << score << endl;
+                        break;
+                    }
             }
         }
 
@@ -283,6 +318,8 @@ int main()
         // Update score every second
         if(counter % 20 == 0) // 20 frames × 50ms = 1 second
             UpdateScore();
+
+        // 게임 오버 체크
 
         Sleep(50); // 0.05 second delay for smoother gameplay
     }
